@@ -13,7 +13,7 @@ def scrap_to_csv():
     csv_filename = input("Enter the output CSV filename (default is 'output'): ") or "output"
 
     # Remove spaces from the filename and add the ".csv" extension
-    csv_filename_modified = csv_filename.replace(" ", "_") + ".csv"
+    csv_filename_modified = f"{csv_filename.replace(' ', '_')}.csv"
 
     data = []
 
@@ -22,7 +22,15 @@ def scrap_to_csv():
         headers = {
             "user-agent": "Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/101.0.4951.54 Safari/537.36"
         }
-        html = requests.get("https://wuzzuf.net/search/jobs/", params=params, headers=headers, timeout=30)
+
+        try:
+            # Use a timeout to prevent potential network issues from causing long delays
+            html = requests.get("https://wuzzuf.net/search/jobs/", params=params, headers=headers, timeout=30)
+            html.raise_for_status()  # Raise an HTTPError for bad responses
+        except requests.exceptions.RequestException as e:
+            print(f"Error fetching page {page}: {e}")
+            continue  # Skip to the next page on error
+
         soup = BeautifulSoup(html.text, "lxml")
 
         for result in soup.select(".css-1gatmva"):
@@ -42,10 +50,10 @@ def scrap_to_csv():
 
     df = pd.DataFrame(data)
     df.to_csv(csv_filename_modified, index=False)
-    return df
+    return df, csv_filename_modified
 
 # Call the function to start the interactive scraping process
-result_df = scrap_to_csv()
+result_df, modified_filename = scrap_to_csv()
 
 # Display a message indicating the original filename provided by the user
-print(f"Result saved to {csv_filename.replace('.csv', '').replace('_', ' ')}")
+print(f"Result saved to {modified_filename.replace('.csv', '').replace('_', ' ')}")
